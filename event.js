@@ -863,8 +863,15 @@ if ( !jQuery.support.focusinBubbles ) {
 	});
 }
 
+//集成到jQuery.fn中，所有jQuery实例都能调用该方法
 jQuery.fn.extend({
-
+	// 事件绑定,支持多种缺省参数，如下6种
+	// on( types, selector, data, fn ,one) 如：$('#test').on('click','div.a',{name:'jack'},function(){},1);
+	// on( types-Object, selector, data ) 如：$('#test').on({'click':function(){},'mouseenter':function(){},'span.a',{name:'jack'})
+	// on( types-Object, data) 如：$('#test').on({'click':function(){},'mouseenter':function(){},{name:'jack'})
+	// on( types, fn ) 如：$('#test').on('click',function(){});
+	// on( types, selector, fn ) 如：$('#test').on('click','span',function(){});
+	// on( types, data, fn ) 如：$('#test').on('click',{name:'jack'},function(){}})
 	on: function( types, selector, data, fn, /*INTERNAL*/ one ) {
 		var origFn, type;
 
@@ -908,16 +915,20 @@ jQuery.fn.extend({
 			origFn = fn;
 			fn = function( event ) {
 				// Can use an empty set, since event contains the info
+				// 初始化一个空的jQuery对象，这样可以使用.off方法,并且event带有remove事件需要的信息
 				jQuery().off( event );
 				return origFn.apply( this, arguments );
 			};
 			// Use same guid so caller can remove using origFn
+			// 事件的删除依赖于guid,需要保持一致
 			fn.guid = origFn.guid || ( origFn.guid = jQuery.guid++ );
 		}
+		//  这里使用this.each的目的是为了保证返回值还是this
 		return this.each( function() {
 			jQuery.event.add( this, types, fn, data, selector );
 		});
 	},
+	// 绑定的相关事件只会执行1次
 	one: function( types, selector, data, fn ) {
 		return this.on( types, selector, data, fn, 1 );
 	},
