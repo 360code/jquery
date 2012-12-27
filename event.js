@@ -869,7 +869,7 @@ jQuery.fn.extend({
 	// on( types, selector, data, fn ,one) 如：$('#test').on('click','div.a',{name:'jack'},function(){},1);
 	// on( types-Object, selector, data ) 如：$('#test').on({'click':function(){},'mouseenter':function(){},'span.a',{name:'jack'})
 	// on( types-Object, data) 如：$('#test').on({'click':function(){},'mouseenter':function(){},{name:'jack'})
-	// on( types, fn ) 如：$('#test').on('click',function(){});
+	// on( types, fn ) 如：$('#test').on('click',function(){})和$('#test').on('click',false);
 	// on( types, selector, fn ) 如：$('#test').on('click','span',function(){});
 	// on( types, data, fn ) 如：$('#test').on('click',{name:'jack'},function(){}})
 	on: function( types, selector, data, fn, /*INTERNAL*/ one ) {
@@ -932,6 +932,13 @@ jQuery.fn.extend({
 	one: function( types, selector, data, fn ) {
 		return this.on( types, selector, data, fn, 1 );
 	},
+	// 事件解绑
+	// 支持多种参数传入,如下
+	// .off(event)
+	// .off({"click":a,"mouseenter":b},"div.test")
+	// .off("click",b) || .off('click.a',b)
+	// .off("click",false)
+	// .off()
 	off: function( types, selector, fn ) {
 		var handleObj, type;
 		if ( types && types.preventDefault && types.handleObj ) {
