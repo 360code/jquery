@@ -1,18 +1,9 @@
-// Expose jQuery to the global object
+﻿// jQuery与全局的连接点，将jQuery和$挂载到window上，外放为全局变量，这两个对象指向jQuery框架内部变量——jQuery
+// 可以查看intro.js了解整体架构
+// 这里是jQuery整体架构中重要的一环，框架内部代码和外部链接的门户
 window.jQuery = window.$ = jQuery;
 
-// Expose jQuery as an AMD module, but only for AMD loaders that
-// understand the issues with loading multiple versions of jQuery
-// in a page that all might call define(). The loader will indicate
-// they have special allowances for multiple jQuery versions by
-// specifying define.amd.jQuery = true. Register as a named module,
-// since jQuery can be concatenated with other files that may use define,
-// but not use a proper concatenation script that understands anonymous
-// AMD modules. A named AMD is safest and most robust way to register.
-// Lowercase jquery is used because AMD module names are derived from
-// file names, and jQuery is normally delivered in a lowercase file name.
-// Do this after creating the global so that if an AMD module wants to call
-// noConflict to hide this version of jQuery, it will work.
+//新版jQuery遵循CommonJS的AMD规范，可见文档：http://wiki.commonjs.org/wiki/Modules/AsynchronousDefinition
 if ( typeof define === "function" && define.amd && define.amd.jQuery ) {
 	define( "jquery", [], function () { return jQuery; } );
 }
