@@ -10,6 +10,8 @@ var runtil = /Until$/,
 		prev: true
 	};
 
+// 为 jQuery 实例对象提供扩展方法：
+// find, has, not, filter, is, closest, index, add, addBack
 jQuery.fn.extend({
 	find: function( selector ) {
 		var i, l, length, n, r, ret,
@@ -68,7 +70,9 @@ jQuery.fn.extend({
 	filter: function( selector ) {
 		return this.pushStack( winnow(this, selector, true), "filter", selector );
 	},
-
+    /**
+     * @desc http://api.jquery.com/is/ 涉及Sizzle，不在此次分析范畴
+     */
 	is: function( selector ) {
 		return !!selector && (
 			typeof selector === "string" ?
@@ -144,22 +148,31 @@ jQuery.fn.extend({
 	}
 });
 
+// andSelf 方法名以后将 addBack 替换，所以请使用 addBack，
+// 这两个方法在官方 API 文档里的区别是：前者不接受参数，后者可选接受一个查找参数
 jQuery.fn.andSelf = jQuery.fn.addBack;
 
 // A painfully simple check to see if an element is disconnected
 // from a document (should be improved, where feasible).
+// 检查某个节点是否在 document 中
+// DOCUMENT_FRAGMENT_NODE(11)
 function isDisconnected( node ) {
 	return !node || !node.parentNode || node.parentNode.nodeType === 11;
 }
-
+/**
+ * @desc 查找某个元素的兄元素或弟元素
+ * @param cur {Element} 出发点元素
+ * @param dir {string } 方向 'previousSibling' or 'nextSibling'
+ * @return {Element}
+ */
 function sibling( cur, dir ) {
 	do {
 		cur = cur[ dir ];
-	} while ( cur && cur.nodeType !== 1 );
+	} while ( cur && cur.nodeType !== 1 ); // ELEMENT_NODE(1)
 
 	return cur;
 }
-
+// 由于要定义方法的参数列表几乎一样，这里使用了一个小技巧，简洁地批定义一堆方法
 jQuery.each({
 	parent: function( elem ) {
 		var parent = elem.parentNode;
@@ -168,7 +181,7 @@ jQuery.each({
 	parents: function( elem ) {
 		return jQuery.dir( elem, "parentNode" );
 	},
-	parentsUntil: function( elem, i, until ) {
+	parentsUntil: function( elem, i, until ) { // i应当是后续调用map时传入的index，但是目前并没有用
 		return jQuery.dir( elem, "parentNode", until );
 	},
 	next: function( elem ) {
@@ -204,17 +217,29 @@ jQuery.each({
 	jQuery.fn[ name ] = function( until, selector ) {
 		var ret = jQuery.map( this, fn, until );
 
-		if ( !runtil.test( name ) ) {
-			selector = until;
-		}
+		// 若方法名不是以 Until 结尾， 则 ……
+        // 实去除以下三个方法，他们拥有相同的参数列表：parentsUntil、 prevUntil、 nextUntil
+        if ( !runtil.test( name ) ) {
+            selector = until;
+        }
 
-		if ( selector && typeof selector === "string" ) {
+		/*
+		 * 根据API文档，只有三个以 Until 结尾的方法接受第二个参数
+		 * 并且 selector 是用来过滤（filter）用的，
+		 * 所以有下面这个if判断，且执行该逻辑
+		 */
+        if ( selector && typeof selector === "string" ) {
 			ret = jQuery.filter( selector, ret );
 		}
 
-		ret = this.length > 1 && !guaranteedUnique[ name ] ? jQuery.unique( ret ) : ret;
+		// 参考模块开头处，guaranteedUnique[ name ] 为 true 的可能性只有name为 children、contents、next、prev时
+        // 所以满足条件的方法名有：parent, parents, parentsUntil, nextAll, prevAll, nextUntil, prevUntil, siblings
+        // $.unique 将DOM元素数组中重复的元素移除
+        ret = this.length > 1 && !guaranteedUnique[ name ] ? jQuery.unique( ret ) : ret;
 
-		if ( this.length > 1 && rparentsprev.test( name ) ) {
+		// 匹配 parents, parentsUntil, prevUntil, prevAll
+        // 为了结果元素符合正常情况，便于使用，会对结果集进行一个倒排
+        if ( this.length > 1 && rparentsprev.test( name ) ) {
 			ret = ret.reverse();
 		}
 
@@ -223,6 +248,13 @@ jQuery.each({
 });
 
 jQuery.extend({
+    /**
+     * @desc
+     * @param expr
+     * @param elems
+     * @param not
+     * @return {Array}
+     */
 	filter: function( expr, elems, not ) {
 		if ( not ) {
 			expr = ":not(" + expr + ")";
@@ -232,20 +264,42 @@ jQuery.extend({
 			jQuery.find.matchesSelector(elems[0], expr) ? [ elems[0] ] : [] :
 			jQuery.find.matches(expr, elems);
 	},
-
-	dir: function( elem, dir, until ) {
+    /**
+     * @desc 从一个元素出发（不包括出发点元素），获取迭代搜索方向上的所有元素，直到遇到document对象或遇到until匹配的元素停止
+     * @param {Element} elem 起始元素
+     * @param {string} dir 迭代搜索方向，可选值：'parentNode'， 'nextSibling'、 'previousSibling'
+     * @param {string} until 选择器表达式，如果遇到 until 匹配的元素，迭代终止
+     * @return {Array}
+     */
+	dir: function( elem, dir, until ) { // 一个简单的 dir 参数，使得函数支持遍历祖先、兄长、兄弟
 		var matched = [],
-			cur = elem[ dir ];
-
+			cur = elem[ dir ];  // 跳过 elem 自身
+        /**
+         * 迭代条件（简化）：cur.nodeType !== 9 && !jQuery( cur ).is( until )
+         * 迭代访问，直到遇到document对象或遇到until匹配的元素
+         * cur.nodeType !== 9	当前DOM节点cur不是document对象
+         * !jQuery( cur ).is( until )	当前DOM节点cur不匹配表达式until
+         *
+         * until === undefined || cur.nodeType !== 1 || !jQuery( cur ).is( until )
+         * 这个布尔表达式也有点意思，执行最后的jQuery.is的隐含条件是：until !== undefined && cur.nodeType === 1
+         * 复合的布尔表达式和三元表达式，能减少代码行数、稍微提升性能，但是代码晦涩，不易阅读和维护。
+         * 也许看不懂也是jQuery风靡的原因之一
+         */
+        // DOCUMENT_NODE(9)
 		while ( cur && cur.nodeType !== 9 && (until === undefined || cur.nodeType !== 1 || !jQuery( cur ).is( until )) ) {
-			if ( cur.nodeType === 1 ) {
-				matched.push( cur );
-			}
-			cur = cur[dir];
-		}
+            if ( cur.nodeType === 1 ) {
+                matched.push( cur );
+            }
+            cur = cur[dir];
+        }
 		return matched;
 	},
-
+    /*
+     * @desc 简单来说，该方法获取元素 n 的所有后续兄弟元素，包含 n，但不包含elem
+     * @param n {Element} 开始计算的元素
+     * @param elem {Element} 跳过的元素
+     * @return {Array} 从 n 开始直到结束的所有的兄弟元素，如果设置了elem，则不包括 elem
+     */
 	sibling: function( n, elem ) {
 		var r = [];
 
@@ -260,6 +314,8 @@ jQuery.extend({
 });
 
 // Implement the identical functionality for filter and not
+// 实现与 filter 和 not 同等的功能
+// keep 是一个布尔值
 function winnow( elements, qualifier, keep ) {
 
 	// Can't pass null or undefined to indexOf in Firefox 4
