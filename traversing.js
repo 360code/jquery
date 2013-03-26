@@ -10,7 +10,8 @@ var runtil = /Until$/,
 		prev: true
 	};
 
-// 为 jQuery 实例对象提供扩展方法：
+// 为 jQuery 实例对象提供扩展方法，用于对结果集的辅助操作，比如条件判断、过滤等，
+// 严格来说不属于遍历范畴（我认为），所以jQuery把它们放在了 Miscellaneous Traversing 下
 // find, has, not, filter, is, closest, index, add, addBack
 jQuery.fn.extend({
 	find: function( selector ) {
@@ -129,7 +130,11 @@ jQuery.fn.extend({
 			// If it receives a jQuery object, the first element is used
 			elem.jquery ? elem[0] : elem, this );
 	},
-
+    /**
+     * @desc 向当前结果元素集中添加一些元素
+     * @param selector 一个用于查找匹配另外的元素的选择器
+     * @param context 文档中查找匹配的起始点
+     */
 	add: function( selector, context ) {
 		var set = typeof selector === "string" ?
 				jQuery( selector, context ) :
@@ -140,7 +145,9 @@ jQuery.fn.extend({
 			all :
 			jQuery.unique( all ) );
 	},
-
+    // 如果 selector 为空，则将上一次结果元素集 push 到jQuery栈的最上面，
+    // 如果存在 selector ，则还要另加一次过滤
+    // 这里有一个很有趣的属性 —— prevObject ，它指向上一次结果jQuery 对象
 	addBack: function( selector ) {
 		return this.add( selector == null ?
 			this.prevObject : this.prevObject.filter(selector)
