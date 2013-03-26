@@ -181,7 +181,7 @@ jQuery.each({
 	parents: function( elem ) {
 		return jQuery.dir( elem, "parentNode" );
 	},
-	parentsUntil: function( elem, i, until ) { // i应当是后续调用map时传入的index，但是目前并没有用
+	parentsUntil: function( elem, i, until ) { // i 是做什么的呢？
 		return jQuery.dir( elem, "parentNode", until );
 	},
 	next: function( elem ) {
@@ -215,45 +215,65 @@ jQuery.each({
 	}
 }, function( name, fn ) {
 	jQuery.fn[ name ] = function( until, selector ) {
-		var ret = jQuery.map( this, fn, until );
+        /* this 是调用该 name 方法的 jQuery 对象，
+         * $.map 的官方文档里指明接受两个参数，但这里我们看到其实传了三个参数
+         * 其实第三个参数会以回调函数 fn 的第三个参数的形式传入，其实就是这样：
+         * $.map(arrayOrObject, function (value, indexOrKey, until) { ... }, until)
+         * value是一个HTML原生节点元素， until只有三个以Until结尾的方法用得到（jQuery接口乱啊）
+         * ret 是一个数组{Array}，它包含了所有满足条件的元素
+         */
+        var ret = jQuery.map( this, fn, until );
 
-		// 若方法名不是以 Until 结尾， 则 ……
-        // 实去除以下三个方法，他们拥有相同的参数列表：parentsUntil、 prevUntil、 nextUntil
+        // 后面会根据条件过滤掉一些
+
+		/*
+         * 实去除以下三个方法，他们拥有相同的参数列表：
+         * 上面通过 $.each() 批量添加的方法中，有三个方法具有相同的参数列表，这三个方法是：
+         * parentsUntil、 prevUntil、 nextUntil，他们的参数列表形如：( elem, i, until )
+         * 若方法名不是以 Until 结尾， 则只接受一个参数，形如：( selector )
+         * 这时的第一个参数 until 就相当于 selector 值，所以这个判断做了一个赋值处理
+         * Suck jQuery
+         */
         if ( !runtil.test( name ) ) {
             selector = until;
         }
 
-		/*
-		 * 根据API文档，只有三个以 Until 结尾的方法接受第二个参数
-		 * 并且 selector 是用来过滤（filter）用的，
-		 * 所以有下面这个if判断，且执行该逻辑
-		 */
+		// 如果存在合法的 selector，则从所有结果集中将满足该 selector 的元素过滤出来
         if ( selector && typeof selector === "string" ) {
 			ret = jQuery.filter( selector, ret );
 		}
 
-		// 参考模块开头处，guaranteedUnique[ name ] 为 true 的可能性只有name为 children、contents、next、prev时
-        // 所以满足条件的方法名有：parent, parents, parentsUntil, nextAll, prevAll, nextUntil, prevUntil, siblings
-        // $.unique 将DOM元素数组中重复的元素移除
+		/* 参考模块开头处，!guaranteedUnique[ name ] 为 true 的可能性只有name为以下值时：
+         * parent, parents, parentsUntil, nextAll, prevAll, nextUntil, prevUntil, siblings
+         * 剩下的方法名还有：children、contents、next、prev
+         * $.unique 将 DOM 元素数组中重复的元素移除
+         * 总结来说，当该方法（name）需要一次处理多个元素时，结果集中可能会产生重复的，所以需要去重，否则不需要。
+         */
         ret = this.length > 1 && !guaranteedUnique[ name ] ? jQuery.unique( ret ) : ret;
 
-		// 匹配 parents, parentsUntil, prevUntil, prevAll
-        // 为了结果元素符合正常情况，便于使用，会对结果集进行一个倒排
+		/* Cool thing
+		 * 匹配 parents, parentsUntil, prevUntil, prevAll
+		 * 基于本模块核心方法 dir 的移动机制，对结果进行一次倒排，便于正常理解和使用
+         */
         if ( this.length > 1 && rparentsprev.test( name ) ) {
 			ret = ret.reverse();
 		}
-
+        /* 将新元素集推到 jQuery 栈的最上面，后面的链式调用就可以直接使用了。
+         * 并且生成一个 selector 值，这个值可以说明新元素集产生的来源。
+         */
 		return this.pushStack( ret, name, core_slice.call( arguments ).join(",") );
 	};
 });
 
 jQuery.extend({
     /**
-     * @desc
-     * @param expr
-     * @param elems
-     * @param not
-     * @return {Array}
+     * @desc 这个方法如果不讲Sizzle的原理，单看这里的话还是很简单的，
+     * 即：如果 not 不设置或设置为 false 时，将从 elems 中过滤出满足 expr 选择器的元素，
+     * 相反，如果设置 not 为 true，将从 elems 中去除满足 expr 选择器的元素
+     * @param expr 过滤选择器
+     * @param elems 被操作的元素集
+     * @param not {boolean} optinal
+     * @return {Array} 满足条件的新数组
      */
 	filter: function( expr, elems, not ) {
 		if ( not ) {
@@ -265,27 +285,27 @@ jQuery.extend({
 			jQuery.find.matches(expr, elems);
 	},
     /**
-     * @desc 从一个元素出发（不包括出发点元素），获取迭代搜索方向上的所有元素，直到遇到document对象或遇到until匹配的元素停止
+     * @desc 从一个元素出发（不包括出发点和结束点元素），获取迭代搜索方向上的所有元素，直到遇到document对象或遇到until匹配的元素停止
      * @param {Element} elem 起始元素
-     * @param {string} dir 迭代搜索方向，可选值：'parentNode'， 'nextSibling'、 'previousSibling'
-     * @param {string} until 选择器表达式，如果遇到 until 匹配的元素，迭代终止
+     * @param {string} dir 迭代搜索方向，可选值：（上）'parentNode'， （右）'nextSibling'、 （左）'previousSibling'
+     * @param {string} until 选择器表达式，如果遇到 until 匹配的元素，迭代终止，不包含 until 元素
      * @return {Array}
      */
 	dir: function( elem, dir, until ) { // 一个简单的 dir 参数，使得函数支持遍历祖先、兄长、兄弟
 		var matched = [],
 			cur = elem[ dir ];  // 跳过 elem 自身
         /**
-         * 迭代条件（简化）：cur.nodeType !== 9 && !jQuery( cur ).is( until )
-         * 迭代访问，直到遇到document对象或遇到until匹配的元素
-         * cur.nodeType !== 9	当前DOM节点cur不是document对象
-         * !jQuery( cur ).is( until )	当前DOM节点cur不匹配表达式until
-         *
-         * until === undefined || cur.nodeType !== 1 || !jQuery( cur ).is( until )
+         * 迭代条件解释：
+         * cur 节点存在有效，在 DOM 的世界里，元素未找到活不存在的结果都是 null，不是 undefined 。
+         * cur.nodeType !== 9 当前元素不是 document 节点，即向上查到 document 停止。注：DOCUMENT_NODE(9)
+         * until === undefined 边界未指定，则继续同一方向执行。
+         * cur.nodeType !== 1 不是元素节点，则继续同一方向执行。注：ELEMENT_NODE(1)
+         * !jQuery( cur ).is( until ) 当前元素不匹配选择器 until，即还没有到边界，则往下执行。
          * 这个布尔表达式也有点意思，执行最后的jQuery.is的隐含条件是：until !== undefined && cur.nodeType === 1
          * 复合的布尔表达式和三元表达式，能减少代码行数、稍微提升性能，但是代码晦涩，不易阅读和维护。
          * 也许看不懂也是jQuery风靡的原因之一
          */
-        // DOCUMENT_NODE(9)
+        //
 		while ( cur && cur.nodeType !== 9 && (until === undefined || cur.nodeType !== 1 || !jQuery( cur ).is( until )) ) {
             if ( cur.nodeType === 1 ) {
                 matched.push( cur );
@@ -299,6 +319,7 @@ jQuery.extend({
      * @param n {Element} 开始计算的元素
      * @param elem {Element} 跳过的元素
      * @return {Array} 从 n 开始直到结束的所有的兄弟元素，如果设置了elem，则不包括 elem
+     * 思考，能用 $.dir 方法替代吗？
      */
 	sibling: function( n, elem ) {
 		var r = [];
@@ -313,28 +334,33 @@ jQuery.extend({
 	}
 });
 
-// Implement the identical functionality for filter and not
-// 实现与 filter 和 not 同等的功能
-// keep 是一个布尔值
+/**
+ * @desc 实现与 filter 和 not 同等的功能，目前只在 .not(selector) 和 .filter(selector) 中有调用
+ * @param elements 被处理的元素集
+ * @param qualifier {selector|function|element|jQueryObject}
+ * @param keep {boolean} 满足 qualifier 条件的是否保留
+ * @return {*}
+ */
 function winnow( elements, qualifier, keep ) {
 
 	// Can't pass null or undefined to indexOf in Firefox 4
 	// Set to 0 to skip string check
 	qualifier = qualifier || 0;
 
-	if ( jQuery.isFunction( qualifier ) ) {
+	if ( jQuery.isFunction( qualifier ) ) { // function
 		return jQuery.grep(elements, function( elem, i ) {
 			var retVal = !!qualifier.call( elem, i, elem );
 			return retVal === keep;
 		});
 
-	} else if ( qualifier.nodeType ) {
+	} else if ( qualifier.nodeType ) { // element
 		return jQuery.grep(elements, function( elem, i ) {
 			return ( elem === qualifier ) === keep;
 		});
 
-	} else if ( typeof qualifier === "string" ) {
-		var filtered = jQuery.grep(elements, function( elem ) {
+	} else if ( typeof qualifier === "string" ) { // selector
+		// 将所有元素节点找出来放在一个数组中
+        var filtered = jQuery.grep(elements, function( elem ) {
 			return elem.nodeType === 1;
 		});
 
@@ -344,7 +370,7 @@ function winnow( elements, qualifier, keep ) {
 			qualifier = jQuery.filter( qualifier, filtered );
 		}
 	}
-
+    // 执行到这里只有 qualifier 是 selector ， 并且不满足 isSimple 时
 	return jQuery.grep(elements, function( elem, i ) {
 		return ( jQuery.inArray( elem, qualifier ) >= 0 ) === keep;
 	});
