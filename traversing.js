@@ -136,18 +136,31 @@ jQuery.fn.extend({
      * @param context 文档中查找匹配的起始点
      */
 	add: function( selector, context ) {
+        /*
+        set
+        1.如果是字符串，则使用jQuery(selector, cxt)，则生成一个jq对象，它可能包含0个或多个元素。
+        其中的元素可能是页面上已有的（selector是选择器），可能是docfragment（selector是html片段）
+        2.如果不是字符串：则得到一个包含0个或多个元素的array。
+        all
+        将当前jQuery对象包含的元素和set合并后的新array
+         */
 		var set = typeof selector === "string" ?
 				jQuery( selector, context ) :
 				jQuery.makeArray( selector && selector.nodeType ? [ selector ] : selector ),
 			all = jQuery.merge( this.get(), set );
-
+        /*
+         isDisconnected( set[0] ) 为 true 表示 selector 是一个html片段，
+         isDisconnected( all[0] ) 为 true 表示 当前 jQuery 对象包含的是一个 docfragment，
+         这两种情况都不存在去重的需要。
+         */
 		return this.pushStack( isDisconnected( set[0] ) || isDisconnected( all[0] ) ?
 			all :
 			jQuery.unique( all ) );
 	},
-    // 如果 selector 为空，则将上一次结果元素集 push 到jQuery栈的最上面，
-    // 如果存在 selector ，则还要另加一次过滤
-    // 这里有一个很有趣的属性 —— prevObject ，它指向上一次结果jQuery 对象
+    /* 如果 selector 为空，则将上一次结果元素集 push 到jQuery栈的最上面，
+     * 如果存在 selector ，则还要另加一次过滤
+     * 这里有一个很有趣的属性 —— prevObject ，它指向上一次结果jQuery 对象
+     */
 	addBack: function( selector ) {
 		return this.add( selector == null ?
 			this.prevObject : this.prevObject.filter(selector)
