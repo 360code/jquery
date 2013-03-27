@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="gbk"/>
+    <title>.add() and .addBack</title>
+    <script type="text/javascript" src="../../src/jquery-1.8.3.js"></script>
+</head>
+<body>
+
+<ul>
+    <li>I am a Li 1</li>
+    <li>I am a Li 2</li>
+    <li class="ref-node">I am a Li 3</li>
+    <li>I am a Li 4</li>
+    <li>I am a Li 5</li>
+</ul>
+
+<div>I am a DIV</div>
+
+<script>
+(function ($) {
+
+    var n = $('ul li.ref-node');
+    n.nextAll().each(function (i) {
+        console.log($(this).text());
+    });
+
+
+})(jQuery);
+</script>
+</body>
+</html>
