@@ -10,9 +10,10 @@ var runtil = /Until$/,
 		prev: true
 	};
 
-// 为 jQuery 实例对象提供扩展方法，用于对结果集的辅助操作，比如条件判断、过滤等，
-// 严格来说不属于遍历范畴（我认为），所以jQuery把它们放在了 Miscellaneous Traversing 下
-// find, has, not, filter, is, closest, index, add, addBack
+/* 为 jQuery 实例对象提供扩展方法，用于对结果集的辅助操作，比如条件判断、过滤等，
+ * 严格来说不属于遍历范畴（我认为），所以jQuery把它们放在了 Miscellaneous Traversing 下
+ * find, has, not, filter, is, closest, index, add, addBack
+ */
 jQuery.fn.extend({
 	find: function( selector ) {
 		var i, l, length, n, r, ret,

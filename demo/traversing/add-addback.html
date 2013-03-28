@@ -21,10 +21,9 @@
 (function ($) {
 
     var n = $('ul li.ref-node');
-    n.nextAll().each(function (i) {
+    n.add('li:first-child').each(function (i) {
         console.log($(this).text());
     });
-
 
 })(jQuery);
 </script>
