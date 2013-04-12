@@ -6,6 +6,7 @@ var curCSS, iframe, iframeDoc,
 	// see here for display values: https://developer.mozilla.org/en-US/docs/CSS/display
 	rdisplayswap = /^(none|table(?!-c[ea]).+)/,
 	rmargin = /^margin/,
+	// core_pnum = /[\-+]?(?:\d*\.|)\d+(?:[eE][\-+]?\d+|)/.source,
 	rnumsplit = new RegExp( "^(" + core_pnum + ")(.*)$", "i" ),
 	rnumnonpx = new RegExp( "^(" + core_pnum + ")(?!px)[a-z%]+$", "i" ),
 	rrelNum = new RegExp( "^([-+])=(" + core_pnum + ")", "i" ),
@@ -23,15 +24,18 @@ var curCSS, iframe, iframeDoc,
 	eventsToggle = jQuery.fn.toggle;
 
 // return a css property mapped to a potentially vendor prefixed property
+// 获取css属性名
 function vendorPropName( style, name ) {
 
 	// shortcut for names that are not vendor prefixed
+	// 简单处理不带前缀的属性名
 	if ( name in style ) {
 		return name;
 	}
 
 	// check for vendor prefixed names
-	var capName = name.charAt(0).toUpperCase() + name.slice(1),
+	// 带前缀的属性名
+	var capName = name.charAt(0).toUpperCase() + name.slice(1), // 第一个字母大写
 		origName = name,
 		i = cssPrefixes.length;
 
@@ -45,26 +49,35 @@ function vendorPropName( style, name ) {
 	return origName;
 }
 
+// 判断节点是否隐藏
+// 为什么用两个参数？
 function isHidden( elem, el ) {
 	elem = el || elem;
+	// elem.ownerDocument 返回elem的根节点，即document
+	// 所以这里后半句为判断此elem是否包含在document中，若不包含，jQuery就认为它是隐藏的。
 	return jQuery.css( elem, "display" ) === "none" || !jQuery.contains( elem.ownerDocument, elem );
 }
 
+// 显示或隐藏节点
 function showHide( elements, show ) {
 	var elem, display,
 		values = [],
 		index = 0,
 		length = elements.length;
 
+	// 第一次遍历节点
 	for ( ; index < length; index++ ) {
 		elem = elements[ index ];
+		// 没有style属性
 		if ( !elem.style ) {
 			continue;
 		}
+		// 取出保存在缓存的olddisplay值
 		values[ index ] = jQuery._data( elem, "olddisplay" );
 		if ( show ) {
 			// Reset the inline display of this element to learn if it is
 			// being hidden by cascaded rules or not
+			// 通过将display设置成空字符，来判断节点是否会显示
 			if ( !values[ index ] && elem.style.display === "none" ) {
 				elem.style.display = "";
 			}
@@ -72,6 +85,7 @@ function showHide( elements, show ) {
 			// Set elements which have been overridden with display: none
 			// in a stylesheet to whatever the default browser style is
 			// for such an element
+			// 如果display被设成了空字符，并且节点是隐藏的，则通过css_defaultDisplay把display默认值缓存起来
 			if ( elem.style.display === "" && isHidden( elem ) ) {
 				values[ index ] = jQuery._data( elem, "olddisplay", css_defaultDisplay(elem.nodeName) );
 			}
@@ -86,12 +100,14 @@ function showHide( elements, show ) {
 
 	// Set the display of most of the elements in a second loop
 	// to avoid the constant reflow
+	// 第二次遍历节点时设置display，避免不断reflow
 	for ( index = 0; index < length; index++ ) {
 		elem = elements[ index ];
 		if ( !elem.style ) {
 			continue;
 		}
 		if ( !show || elem.style.display === "none" || elem.style.display === "" ) {
+			// 如果要显示，则设置为缓存值或者空字符，否则设置为none
 			elem.style.display = show ? values[ index ] || "" : "none";
 		}
 	}
@@ -100,12 +116,23 @@ function showHide( elements, show ) {
 }
 
 jQuery.fn.extend({
+	// 对外提供的接口，读取/设置节点样式
+	// 方式1：$('header').css('height')
+	// 方式2：$('header').css('height', '20px')
+	// 方式3：$('header').css(attr, function(index,oldValue){})
+	// 方式4：$('header').css({'height':'10px', 'width':'20px'})
 	css: function( name, value ) {
+		// jQuery.access是一个多功能内部方法，神一样的代码
+		// 此处需要比较需要关心的是 function( elem, name, value ) 这个匿名方法
+	    // 在jQuery.access经过各种判断检测后，最终就是调用这个匿名方法，遍历this，进行样式读取、设置
+	    // elem：设置/读取样式的节点
+	    // name：样式名
+	    // value：样式值
 		return jQuery.access( this, function( elem, name, value ) {
 			return value !== undefined ?
-				jQuery.style( elem, name, value ) :
-				jQuery.css( elem, name );
-		}, name, value, arguments.length > 1 );
+				jQuery.style( elem, name, value ) : 	// 设置样式，方式2、3、4的最终归宿
+				jQuery.css( elem, name );	// 读取样式，方式1的最终归宿
+		}, name, value, arguments.length > 1 );	// arguments.length > 1 即 value !== undefined，jQuery.access中的参数为chainable，设置样式的时候实现链式调用。但实际上如果采用css({'height':'10px', 'width':'20px'})这种方式来设置，arguments.length == 1，jQuery.access内部对这种情况做了特殊处理，chainable继续为true
 	},
 	show: function() {
 		return showHide( this, true );
@@ -166,17 +193,22 @@ jQuery.extend({
 	},
 
 	// Get and set the style property on a DOM Node
+	// 读取和设置DOM节点的style属性
 	style: function( elem, name, value, extra ) {
 		// Don't set styles on text and comment nodes
+		// 过滤掉文本和注释节点以及没有style属性的节点
+		// nodeType = 3，文本；8，注释；
 		if ( !elem || elem.nodeType === 3 || elem.nodeType === 8 || !elem.style ) {
 			return;
 		}
 
 		// Make sure that we're working with the right name
+		// 修正属性名
 		var ret, type, hooks,
 			origName = jQuery.camelCase( name ),
 			style = elem.style;
 
+		//jQuery.cssProps中如果有则取出，否则通过vendorPropName方法来得到实际的css属性名，并缓存在jQuery.cssProps中
 		name = jQuery.cssProps[ origName ] || ( jQuery.cssProps[ origName ] = vendorPropName( style, origName ) );
 
 		// gets hook for the prefixed version
@@ -184,6 +216,7 @@ jQuery.extend({
 		hooks = jQuery.cssHooks[ name ] || jQuery.cssHooks[ origName ];
 
 		// Check if we're setting a value
+		// 设置属性
 		if ( value !== undefined ) {
 			type = typeof value;
 
@@ -224,6 +257,7 @@ jQuery.extend({
 		}
 	},
 
+	// 读取节点渲染后的样式值
 	css: function( elem, name, numeric, extra ) {
 		var val, num, hooks,
 			origName = jQuery.camelCase( name );
@@ -282,6 +316,12 @@ jQuery.extend({
 
 // NOTE: To any future maintainer, we've window.getComputedStyle
 // because jsdom on node.js will break without it.
+// curCSS 为 jQuery.css 的核心方法，获取节点样式
+// window.getComputedStyle类似于style，但有区别：
+// 1、只读与可写
+// 2、获取的对象范围
+// 关于window.getComputedStyle，延伸阅读 http://www.zhangxinxu.com/wordpress/2012/05/getcomputedstyle-js-getpropertyvalue-currentstyle/
+// IE6-8不支持
 if ( window.getComputedStyle ) {
 	curCSS = function( elem, name ) {
 		var ret, width, minWidth, maxWidth,
@@ -291,6 +331,9 @@ if ( window.getComputedStyle ) {
 		if ( computed ) {
 
 			// getPropertyValue is only needed for .css('filter') in IE9, see #12537
+			// getPropertyValue方法可以获取CSS样式对象上的属性值（直接属性名称）
+			// 这里是针对12537bug的修复 http://bugs.jquery.com/ticket/12537
+			// bug现象是 element.css('filter') returns undefined in IE9
 			ret = computed.getPropertyValue( name ) || computed[ name ];
 
 			if ( ret === "" && !jQuery.contains( elem.ownerDocument, elem ) ) {
@@ -301,6 +344,7 @@ if ( window.getComputedStyle ) {
 			// Chrome < 17 and Safari 5.0 uses "computed value" instead of "used value" for margin-right
 			// Safari 5.1.7 (at least) returns percentage for a larger set of values, but width seems to be reliably pixels
 			// this is against the CSSOM draft spec: http://dev.w3.org/csswg/cssom/#resolved-values
+			// 来自Dean Edwards的碉堡了的hack
 			if ( rnumnonpx.test( ret ) && rmargin.test( name ) ) {
 				width = style.width;
 				minWidth = style.minWidth;
@@ -318,6 +362,7 @@ if ( window.getComputedStyle ) {
 		return ret;
 	};
 } else if ( document.documentElement.currentStyle ) {
+	// currentStyle与getComputedStyle相似，只有IE支持
 	curCSS = function( elem, name ) {
 		var left, rsLeft,
 			ret = elem.currentStyle && elem.currentStyle[ name ],
@@ -325,6 +370,7 @@ if ( window.getComputedStyle ) {
 
 		// Avoid setting ret to empty string here
 		// so we don't default to auto
+		// 如果currentStyle取不到，尝试用style来取
 		if ( ret == null && style && style[ name ] ) {
 			ret = style[ name ];
 		}
@@ -336,6 +382,8 @@ if ( window.getComputedStyle ) {
 		// but a number that has a weird ending, we need to convert it to pixels
 		// but not position css attributes, as those are proportional to the parent element instead
 		// and we can't measure the parent instead because it might trigger a "stacking dolls" problem
+		// 又是来自Dean Edwards的碉堡了的hack
+		// 不规则的像素数字需要额外处理
 		if ( rnumnonpx.test( ret ) && !rposition.test( name ) ) {
 
 			// Remember the original values
@@ -360,6 +408,7 @@ if ( window.getComputedStyle ) {
 	};
 }
 
+// 设置正数
 function setPositiveNumber( elem, value, subtract ) {
 	var matches = rnumsplit.exec( value );
 	return matches ?
@@ -452,17 +501,21 @@ function getWidthOrHeight( elem, name, extra ) {
 
 
 // Try to determine the default display value of an element
+// 判断一个节点的display默认值
 function css_defaultDisplay( nodeName ) {
+	// 缓存中已有，直接return值
 	if ( elemdisplay[ nodeName ] ) {
 		return elemdisplay[ nodeName ];
 	}
 
+	// 向body中添加一个节点，取其display值
 	var elem = jQuery( "<" + nodeName + ">" ).appendTo( document.body ),
 		display = elem.css("display");
 	elem.remove();
 
 	// If the simple way fails,
 	// get element's real default display by attaching it to a temp iframe
+	// 如果上述方法无效，则创建一个临时的iframe，将节点append到此iframe中，再取其display值
 	if ( display === "none" || display === "" ) {
 		// Use the already-created iframe if possible
 		iframe = document.body.appendChild(
@@ -489,6 +542,7 @@ function css_defaultDisplay( nodeName ) {
 	}
 
 	// Store the correct default display
+	// 将值缓存起来
 	elemdisplay[ nodeName ] = display;
 
 	return display;
