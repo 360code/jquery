@@ -867,7 +867,7 @@ if ( !jQuery.support.focusinBubbles ) {
 jQuery.fn.extend({
 	// 事件绑定,支持多种缺省参数，如下6种
 	// on( types, selector, data, fn ,one) 如：$('#test').on('click','div.a',{name:'jack'},function(){},1);
-	// on( types-Object, selector, data ) 如：$('#test').on({'click':function(){},'mouseenter':function(){},'span.a',{name:'jack'})
+	// on( types-Object, selector, data ) 如：$('#test').on({'click':function(){},'mouseenter':function(){}},'span.a',{name:'jack'})
 	// on( types-Object, data) 如：$('#test').on({'click':function(){},'mouseenter':function(){},{name:'jack'})
 	// on( types, fn ) 如：$('#test').on('click',function(){})和$('#test').on('click',false);
 	// on( types, selector, fn ) 如：$('#test').on('click','span',function(){});
